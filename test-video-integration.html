@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Pollinations → 비디오 생성기 연동 테스트</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: #0f172a; }
+    </style>
+</head>
+<body class="text-white min-h-screen p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-8 text-center text-purple-400">
+            🎬 Pollinations → AI 비디오 생성기 연동 테스트
+        </h1>
+
+        <div class="bg-slate-800 rounded-lg p-6 mb-6">
+            <h2 class="text-xl font-bold mb-4 text-green-400">📋 테스트 시나리오</h2>
+            
+            <div class="space-y-4 text-sm">
+                <div class="bg-slate-900/60 p-3 rounded-lg border-l-4 border-purple-500">
+                    <h3 class="font-bold text-purple-400 mb-1">1. 이미지 생성 (Pollinations)</h3>
+                    <p class="text-slate-400">아래 버튼으로 테스트 이미지를 생성하면 "🎬 비디오 생성" 버튼이 나타납니다</p>
+                </div>
+
+                <div class="bg-slate-900/60 p-3 rounded-lg border-l-4 border-blue-500">
+                    <h3 class="font-bold text-blue-400 mb-1">2. 비디오 생성기 연결</h3>
+                    <p class="text-slate-400">비디오 생성 버튼 클릭 시 새 창이 열리고 이미지가 자동 업로드됩니다</p>
+                </div>
+
+                <div class="bg-slate-900/60 p-3 rounded-lg border-l-4 border-green-500">
+                    <h3 class="font-bold text-green-400 mb-1">3. 자동 업로드 확인</h3>
+                    <p class="text-slate-400">비디오 생성기에서 이미지 갤러리에 이미지가 표시되고 비디오 생성이 활성화됩니다</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-slate-800 rounded-lg p-6 mb-6">
+            <h2 class="text-xl font-bold mb-4 text-blue-400">🎨 테스트 이미지 생성</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-slate-300 text-sm mb-2">테스트 프롬프트:</label>
+                    <input type="text" id="testPrompt" 
+                           value="A beautiful sunset over mountains, cinematic style"
+                           class="w-full p-3 bg-slate-900 border border-slate-700 rounded-lg text-white">
+                </div>
+                
+                <button onclick="generateTestImage()" 
+                        class="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold rounded-lg">
+                    🎨 Pollinations 이미지 생성
+                </button>
+                
+                <div id="testImageResult" class="hidden">
+                    <div class="bg-slate-900/60 p-4 rounded-lg">
+                        <h3 class="font-bold text-green-400 mb-2">✅ 생성된 이미지:</h3>
+                        <img id="testImage" class="w-full rounded-lg mb-3" />
+                        <p id="testStatus" class="text-sm text-slate-400 mb-3"></p>
+                        
+                        <!-- 비디오 생성 버튼이 여기 추가될 예정 -->
+                        <div id="videoButtonContainer"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-slate-800 rounded-lg p-6">
+            <h2 class="text-xl font-bold mb-4 text-orange-400">📋 체크리스트</h2>
+            
+            <div class="space-y-2 text-sm">
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="check1" class="text-purple-600">
+                    <label for="check1" class="text-slate-300">이미지 생성 후 "🎬 비디오 생성" 버튼이 표시됨</label>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="check2" class="text-purple-600">
+                    <label for="check2" class="text-slate-300">비디오 생성 버튼 클릭 시 새 창이 열림</label>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="check3" class="text-purple-600">
+                    <label for="check3" class="text-slate-300">비디오 생성기에 이미지가 자동으로 업로드됨</label>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="check4" class="text-purple-600">
+                    <label for="check4" class="text-slate-300">비디오 생성 버튼이 활성화됨</label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentImageMode = 'pollinations'; // Pollinations 모드 설정
+        
+        async function generateTestImage() {
+            const prompt = document.getElementById('testPrompt').value;
+            const resultDiv = document.getElementById('testImageResult');
+            const imgEl = document.getElementById('testImage');
+            const statusEl = document.getElementById('testStatus');
+            const btnContainer = document.getElementById('videoButtonContainer');
+            
+            resultDiv.classList.remove('hidden');
+            statusEl.textContent = '🎨 Pollinations AI로 이미지 생성 중...';
+            statusEl.className = 'text-sm text-purple-400 mb-3';
+            
+            try {
+                // Pollinations API URL 생성
+                const seed = Math.floor(Math.random() * 1000000);
+                const params = new URLSearchParams({
+                    width: '1920',
+                    height: '1080',
+                    seed: seed.toString(),
+                    nologo: 'true',
+                    model: 'flux'
+                });
+                
+                const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?${params}`;
+                
+                // 이미지 로드
+                await new Promise((resolve, reject) => {
+                    const img = new Image();
+                    
+                    const timeout = setTimeout(() => {
+                        reject(new Error('이미지 생성 시간 초과 (30초)'));
+                    }, 30000);
+                    
+                    img.onload = () => {
+                        clearTimeout(timeout);
+                        imgEl.src = imageUrl;
+                        statusEl.textContent = '✅ Pollinations 이미지 생성 완료!';
+                        statusEl.className = 'text-sm text-green-400 mb-3';
+                        
+                        // 비디오 생성 버튼 추가
+                        const videoBtn = document.createElement('button');
+                        videoBtn.className = 'px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-sm font-bold rounded-lg';
+                        videoBtn.textContent = '🎬 비디오 생성';
+                        videoBtn.onclick = () => openVideoGenerator(imageUrl, prompt, 0);
+                        
+                        btnContainer.innerHTML = '';
+                        btnContainer.appendChild(videoBtn);
+                        
+                        resolve();
+                    };
+                    
+                    img.onerror = () => {
+                        clearTimeout(timeout);
+                        reject(new Error('Pollinations 이미지 로드 실패'));
+                    };
+                    
+                    img.src = imageUrl;
+                });
+                
+            } catch (error) {
+                console.error('이미지 생성 오류:', error);
+                statusEl.textContent = `❌ 오류: ${error.message}`;
+                statusEl.className = 'text-sm text-red-400 mb-3';
+            }
+        }
+        
+        function openVideoGenerator(imageUrl, prompt, idx) {
+            // AI 비디오 생성기 페이지가 있는지 확인
+            const videoGenWindow = window.open('ai-video-generator.html', 'aiVideoGenerator');
+            
+            // 이미지 데이터 전송을 위한 메시지
+            setTimeout(() => {
+                videoGenWindow.postMessage({
+                    type: 'pollinations-image',
+                    imageUrl: imageUrl,
+                    prompt: prompt,
+                    index: idx
+                }, '*');
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

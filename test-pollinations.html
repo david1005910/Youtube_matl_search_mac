@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pollinations 이미지 생성 테스트</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: #0f172a; }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+    </style>
+</head>
+<body class="text-white min-h-screen p-8">
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold mb-8 text-center gradient-bg bg-clip-text text-transparent">
+            🎨 Pollinations AI 이미지 생성 테스트
+        </h1>
+
+        <!-- Test Script Input -->
+        <div class="bg-slate-800 rounded-lg p-6 mb-6">
+            <h2 class="text-xl font-bold mb-4 text-purple-400">📝 테스트 스크립트</h2>
+            <textarea id="testScript" rows="10" class="w-full p-4 bg-slate-900 rounded-lg text-slate-100 border border-slate-700">
+썸네일: A dramatic and symbolic thumbnail image featuring a massive, rusty, and visibly stalled industrial gear (representing national economy) prominently centered, with a thick, crude metal chain explicitly labeled '노조' (Korean for 'Union') wrapped tightly around it, preventing movement. The background shows a dark, somber, and slightly blurred South Korean high-rise cityscape at dusk.
+
+Chapter 1 이미지: Modern Korean office workers looking stressed and exhausted, sitting at desks with computer monitors showing declining graphs, photorealistic style, muted colors
+
+이미지: Empty factory floor with idle machinery and production lines stopped, industrial setting, dramatic lighting emphasizing the stillness
+
+[Image: Protesters holding union banners and signs in Korean, crowded street demonstration scene, documentary photography style]
+
+Scene 4 Visual: Split screen showing wealthy executives in luxury cars contrasted with struggling small business owners closing shops, high contrast composition
+            </textarea>
+            
+            <div class="mt-4 flex gap-4">
+                <button onclick="extractAndGenerate()" class="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-lg font-bold">
+                    🚀 프롬프트 추출 및 생성
+                </button>
+                
+                <select id="modelSelect" class="px-4 py-2 bg-slate-700 rounded-lg">
+                    <option value="turbo">Turbo (빠름)</option>
+                    <option value="flux">Flux (고품질)</option>
+                    <option value="flux-realism">Flux Realism</option>
+                    <option value="flux-anime">Flux Anime</option>
+                </select>
+                
+                <select id="sizeSelect" class="px-4 py-2 bg-slate-700 rounded-lg">
+                    <option value="1920x1080">Full HD (1920×1080)</option>
+                    <option value="1280x720">HD (1280×720)</option>
+                    <option value="1080x1080">Square (1080×1080)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Extracted Prompts -->
+        <div id="promptsSection" class="bg-slate-800 rounded-lg p-6 mb-6 hidden">
+            <h2 class="text-xl font-bold mb-4 text-green-400">✅ 추출된 프롬프트</h2>
+            <div id="promptsList" class="space-y-3"></div>
+        </div>
+
+        <!-- Generated Images -->
+        <div id="gallerySection" class="bg-slate-800 rounded-lg p-6 hidden">
+            <h2 class="text-xl font-bold mb-4 text-blue-400">🖼️ 생성된 이미지</h2>
+            <div id="imageGallery" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
+        </div>
+
+        <!-- Status -->
+        <div id="status" class="fixed bottom-4 right-4 bg-slate-900 px-6 py-3 rounded-lg shadow-lg hidden"></div>
+    </div>
+
+    <script>
+        // Pollinations configuration
+        const POLLINATIONS_BASE = 'https://image.pollinations.ai/prompt/';
+
+        // Extract prompts from script
+        function extractPrompts(text) {
+            const prompts = [];
+            
+            // Pattern 1: 썸네일:
+            const thumb = text.match(/썸네일[：:]\s*([^\n]+)/gi);
+            if (thumb) {
+                thumb.forEach(match => {
+                    prompts.push(match.replace(/썸네일[：:]\s*/i, '').trim());
+                });
+            }
+            
+            // Pattern 2: 이미지:
+            const imgs = text.matchAll(/이미지[：:]\s*([^\n]+)/gi);
+            for (const match of imgs) {
+                prompts.push(match[1].trim());
+            }
+            
+            // Pattern 3: [Image: ...]
+            const bracketed = text.matchAll(/\[Image:\s*([^\]]+)\]/gi);
+            for (const match of bracketed) {
+                prompts.push(match[1].trim());
+            }
+            
+            // Pattern 4: Visual:
+            const visuals = text.matchAll(/Visual[：:]\s*([^\n]+)/gi);
+            for (const match of visuals) {
+                prompts.push(match[1].trim());
+            }
+            
+            return [...new Set(prompts)]; // Remove duplicates
+        }
+
+        // Generate image URL
+        function generateImageUrl(prompt, model = 'turbo', width = 1920, height = 1080) {
+            const seed = Math.floor(Math.random() * 1000000);
+            const params = new URLSearchParams({
+                width: width.toString(),
+                height: height.toString(),
+                seed: seed.toString(),
+                nologo: 'true',
+                model: model
+            });
+            
+            return `${POLLINATIONS_BASE}${encodeURIComponent(prompt)}?${params}`;
+        }
+
+        // Extract and generate images
+        async function extractAndGenerate() {
+            const scriptText = document.getElementById('testScript').value;
+            const model = document.getElementById('modelSelect').value;
+            const size = document.getElementById('sizeSelect').value.split('x');
+            
+            // Extract prompts
+            const prompts = extractPrompts(scriptText);
+            
+            if (prompts.length === 0) {
+                showStatus('프롬프트를 찾을 수 없습니다', 'error');
+                return;
+            }
+            
+            // Display prompts
+            displayPrompts(prompts);
+            
+            // Generate images
+            showStatus(`${prompts.length}개 이미지 생성 중...`, 'info');
+            
+            const gallery = document.getElementById('imageGallery');
+            gallery.innerHTML = '';
+            document.getElementById('gallerySection').classList.remove('hidden');
+            
+            for (let i = 0; i < prompts.length; i++) {
+                const imageUrl = generateImageUrl(prompts[i], model, parseInt(size[0]), parseInt(size[1]));
+                
+                // Create image card
+                const card = document.createElement('div');
+                card.className = 'relative group';
+                card.innerHTML = `
+                    <div class="bg-slate-900 rounded-lg overflow-hidden">
+                        <div class="aspect-video bg-slate-800 flex items-center justify-center">
+                            <span class="text-slate-500">Loading ${i + 1}...</span>
+                        </div>
+                        <div class="p-3">
+                            <p class="text-xs text-slate-400 truncate">${prompts[i].substring(0, 50)}...</p>
+                        </div>
+                    </div>
+                `;
+                gallery.appendChild(card);
+                
+                // Load image
+                const img = new Image();
+                img.onload = () => {
+                    card.innerHTML = `
+                        <div class="bg-slate-900 rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-purple-500 transition">
+                            <img src="${imageUrl}" alt="Image ${i + 1}" class="w-full aspect-video object-cover">
+                            <div class="p-3">
+                                <p class="text-xs text-slate-400 truncate">${prompts[i].substring(0, 50)}...</p>
+                                <div class="mt-2 flex gap-2">
+                                    <a href="${imageUrl}" download="image-${i + 1}.jpg" class="text-xs bg-green-600 px-2 py-1 rounded hover:bg-green-500">다운로드</a>
+                                    <button onclick="window.open('${imageUrl}')" class="text-xs bg-blue-600 px-2 py-1 rounded hover:bg-blue-500">크게보기</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                };
+                img.src = imageUrl;
+                
+                // Delay between requests
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            showStatus(`${prompts.length}개 이미지 생성 완료!`, 'success');
+        }
+
+        // Display extracted prompts
+        function displayPrompts(prompts) {
+            const section = document.getElementById('promptsSection');
+            const list = document.getElementById('promptsList');
+            
+            section.classList.remove('hidden');
+            list.innerHTML = prompts.map((prompt, i) => `
+                <div class="flex items-start gap-3 p-3 bg-slate-900 rounded">
+                    <span class="text-purple-400 font-bold">${i + 1}</span>
+                    <p class="flex-1 text-sm text-slate-300">${prompt}</p>
+                </div>
+            `).join('');
+        }
+
+        // Show status message
+        function showStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            const colors = {
+                info: 'text-blue-400',
+                success: 'text-green-400',
+                error: 'text-red-400'
+            };
+            
+            status.className = `fixed bottom-4 right-4 bg-slate-900 px-6 py-3 rounded-lg shadow-lg ${colors[type]}`;
+            status.textContent = message;
+            status.classList.remove('hidden');
+            
+            if (type !== 'error') {
+                setTimeout(() => {
+                    status.classList.add('hidden');
+                }, 3000);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎬 AI 비디오 생성기 - Pollinations + WAN 2.2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+        
+        .glass {
+            background: rgba(17, 24, 39, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(75, 85, 99, 0.3);
+        }
+        
+        .glow {
+            box-shadow: 0 0 20px rgba(147, 51, 234, 0.3);
+        }
+        
+        .loading-dots::after {
+            content: '...';
+            animation: dots 1.5s steps(3, end) infinite;
+        }
+        
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+        
+        .image-card {
+            transition: all 0.3s ease;
+        }
+        
+        .image-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(147, 51, 234, 0.5);
+        }
+        
+        .progress-bar {
+            transition: width 0.5s ease;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-5xl font-bold text-white mb-3 drop-shadow-lg">
+                🎬 AI 비디오 생성기
+            </h1>
+            <p class="text-xl text-gray-200">
+                Pollinations AI 이미지 + WAN 2.2 비디오 생성 파이프라인
+            </p>
+            <div class="flex justify-center gap-4 mt-4">
+                <span class="px-3 py-1 bg-purple-600 text-white rounded-full text-sm">Pollinations AI</span>
+                <span class="px-3 py-1 bg-blue-600 text-white rounded-full text-sm">WAN 2.2 I2V</span>
+                <span class="px-3 py-1 bg-green-600 text-white rounded-full text-sm">Real-ESRGAN</span>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Step 1: Script Input -->
+            <div class="glass rounded-xl p-6 glow">
+                <h2 class="text-2xl font-bold text-white mb-4 flex items-center">
+                    <span class="text-3xl mr-2">📝</span>
+                    Step 1: 스크립트 입력
+                </h2>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-gray-300 text-sm mb-2">비디오 주제</label>
+                        <input 
+                            type="text" 
+                            id="videoTopic"
+                            placeholder="예: 미래 도시의 일몰"
+                            class="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        />
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-300 text-sm mb-2">스크립트/나레이션</label>
+                        <textarea 
+                            id="scriptText"
+                            rows="6"
+                            placeholder="각 장면에 대한 설명을 입력하세요. 줄바꿈으로 장면을 구분합니다."
+                            class="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        ></textarea>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-300 text-sm mb-2">스타일 선택</label>
+                        <select id="styleSelect" class="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white">
+                            <option value="cinematic">🎬 시네마틱</option>
+                            <option value="anime">🎨 애니메이션</option>
+                            <option value="realistic">📷 사실적</option>
+                            <option value="fantasy">🦄 판타지</option>
+                            <option value="cyberpunk">🤖 사이버펑크</option>
+                            <option value="watercolor">🎨 수채화</option>
+                            <option value="oil painting">🖼️ 유화</option>
+                            <option value="3d render">💎 3D 렌더</option>
+                        </select>
+                    </div>
+                    
+                    <button 
+                        id="generateScenesBtn"
+                        onclick="generateScenes()"
+                        class="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all transform hover:scale-105"
+                    >
+                        🎯 장면 생성하기
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 2: Image Generation -->
+            <div class="glass rounded-xl p-6 glow">
+                <h2 class="text-2xl font-bold text-white mb-4 flex items-center">
+                    <span class="text-3xl mr-2">🎨</span>
+                    Step 2: AI 이미지 생성
+                </h2>
+                
+                <div id="scenesContainer" class="space-y-3 max-h-96 overflow-y-auto">
+                    <p class="text-gray-400 text-center py-8">
+                        스크립트를 입력하고 장면을 생성하세요
+                    </p>
+                </div>
+                
+                <button 
+                    id="generateImagesBtn"
+                    onclick="generateAllImages()"
+                    disabled
+                    class="w-full py-3 mt-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-bold rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    🖼️ 모든 이미지 생성
+                </button>
+                
+                <div id="imageProgress" class="mt-4 hidden">
+                    <div class="bg-gray-800 rounded-full h-3 overflow-hidden">
+                        <div id="progressBar" class="progress-bar bg-gradient-to-r from-purple-500 to-pink-500 h-full" style="width: 0%"></div>
+                    </div>
+                    <p class="text-gray-300 text-sm mt-2 text-center">
+                        <span id="progressText">0/0 이미지 생성 중</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Step 3: Video Generation -->
+            <div class="glass rounded-xl p-6 glow">
+                <h2 class="text-2xl font-bold text-white mb-4 flex items-center">
+                    <span class="text-3xl mr-2">🎬</span>
+                    Step 3: 비디오 생성
+                </h2>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-gray-300 text-sm mb-2">비디오 설정</label>
+                        
+                        <div class="space-y-3">
+                            <div>
+                                <label class="text-gray-400 text-xs">해상도</label>
+                                <select id="resolution" class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm">
+                                    <option value="720p">HD (1280x720)</option>
+                                    <option value="1080p" selected>Full HD (1920x1080)</option>
+                                    <option value="2k">2K (2560x1440)</option>
+                                    <option value="4k">4K (3840x2160)</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="text-gray-400 text-xs">프레임 레이트</label>
+                                <select id="fps" class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm">
+                                    <option value="24">24 FPS (영화)</option>
+                                    <option value="30" selected>30 FPS (표준)</option>
+                                    <option value="60">60 FPS (고품질)</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="text-gray-400 text-xs">장면당 길이</label>
+                                <select id="sceneDuration" class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm">
+                                    <option value="2">2초</option>
+                                    <option value="3" selected>3초</option>
+                                    <option value="4">4초</option>
+                                    <option value="5">5초</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="text-gray-400 text-xs">모션 강도</label>
+                                <input type="range" id="motionIntensity" min="0" max="100" value="70" 
+                                    class="w-full" 
+                                    oninput="document.getElementById('motionValue').textContent = this.value + '%'">
+                                <span id="motionValue" class="text-gray-400 text-xs">70%</span>
+                            </div>
+                            
+                            <div>
+                                <label class="text-gray-400 text-xs flex items-center">
+                                    <input type="checkbox" id="useUpscaling" checked class="mr-2">
+                                    Real-ESRGAN 업스케일링 사용
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button 
+                        id="generateVideoBtn"
+                        onclick="generateVideo()"
+                        disabled
+                        class="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        🚀 비디오 생성 시작
+                    </button>
+                    
+                    <div id="videoStatus" class="hidden">
+                        <div class="bg-gray-800 rounded-lg p-4">
+                            <p class="text-gray-300 text-sm pulse">
+                                <span id="statusText">준비 중...</span>
+                                <span class="loading-dots"></span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Generated Images Gallery -->
+        <div id="imagesGallery" class="mt-8 hidden">
+            <h2 class="text-2xl font-bold text-white mb-4">🖼️ 생성된 이미지</h2>
+            <div id="galleryGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                <!-- Images will be added here -->
+            </div>
+        </div>
+
+        <!-- Video Result -->
+        <div id="videoResult" class="mt-8 hidden">
+            <div class="glass rounded-xl p-6 glow">
+                <h2 class="text-2xl font-bold text-white mb-4">🎥 생성된 비디오</h2>
+                <video id="resultVideo" controls class="w-full rounded-lg shadow-2xl"></video>
+                
+                <div class="mt-4 flex gap-4">
+                    <button onclick="downloadVideo()" class="flex-1 py-3 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-700 transition-all">
+                        💾 다운로드
+                    </button>
+                    <button onclick="shareVideo()" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-all">
+                        🔗 공유
+                    </button>
+                    <button onclick="editVideo()" class="flex-1 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition-all">
+                        ✂️ 편집
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Messages -->
+        <div id="statusMessages" class="fixed bottom-4 right-4 space-y-2 z-50">
+            <!-- Status messages will appear here -->
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let scenes = [];
+        let generatedImages = [];
+        let videoUrl = null;
+
+        // Utility functions
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('statusMessages');
+            const msgId = 'status-' + Date.now();
+            
+            const colors = {
+                info: 'bg-blue-600',
+                success: 'bg-green-600',
+                error: 'bg-red-600',
+                warning: 'bg-yellow-600'
+            };
+            
+            const msgEl = document.createElement('div');
+            msgEl.id = msgId;
+            msgEl.className = `${colors[type]} text-white px-4 py-2 rounded-lg shadow-lg transition-all transform translate-x-0`;
+            msgEl.textContent = message;
+            
+            statusDiv.appendChild(msgEl);
+            
+            setTimeout(() => {
+                msgEl.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(() => msgEl.remove(), 300);
+            }, 3000);
+        }
+
+        // Step 1: Generate scenes from script
+        function generateScenes() {
+            const topic = document.getElementById('videoTopic').value.trim();
+            const scriptText = document.getElementById('scriptText').value.trim();
+            const style = document.getElementById('styleSelect').value;
+            
+            if (!topic && !scriptText) {
+                showStatus('주제나 스크립트를 입력해주세요', 'warning');
+                return;
+            }
+            
+            // Parse script into scenes
+            scenes = [];
+            
+            if (scriptText) {
+                const lines = scriptText.split('\n').filter(line => line.trim());
+                scenes = lines.map((line, index) => ({
+                    id: index + 1,
+                    description: line.trim(),
+                    style: style,
+                    imageUrl: null,
+                    status: 'pending'
+                }));
+            } else {
+                // Auto-generate scenes based on topic
+                scenes = generateDefaultScenes(topic, style);
+            }
+            
+            displayScenes();
+            document.getElementById('generateImagesBtn').disabled = false;
+            showStatus(`${scenes.length}개 장면이 생성되었습니다`, 'success');
+        }
+
+        function generateDefaultScenes(topic, style) {
+            // Generate default scenes based on topic
+            return [
+                { id: 1, description: `${topic} - 오프닝 샷, 와이드 앵글`, style, imageUrl: null, status: 'pending' },
+                { id: 2, description: `${topic} - 메인 씬, 미디엄 샷`, style, imageUrl: null, status: 'pending' },
+                { id: 3, description: `${topic} - 디테일 샷, 클로즈업`, style, imageUrl: null, status: 'pending' },
+                { id: 4, description: `${topic} - 액션 씬, 다이나믹 앵글`, style, imageUrl: null, status: 'pending' },
+                { id: 5, description: `${topic} - 엔딩 샷, 시네마틱`, style, imageUrl: null, status: 'pending' }
+            ];
+        }
+
+        function displayScenes() {
+            const container = document.getElementById('scenesContainer');
+            container.innerHTML = scenes.map(scene => `
+                <div class="bg-gray-800 rounded-lg p-3 border border-gray-700" id="scene-${scene.id}">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <span class="text-purple-400 font-bold text-sm">Scene ${scene.id}</span>
+                            <p class="text-gray-300 text-sm mt-1">${scene.description}</p>
+                            <span class="text-xs text-gray-500">${scene.style}</span>
+                        </div>
+                        <div class="ml-3">
+                            <span id="status-${scene.id}" class="text-xs px-2 py-1 rounded bg-gray-700 text-gray-400">
+                                대기중
+                            </span>
+                        </div>
+                    </div>
+                    <div id="preview-${scene.id}" class="mt-2 hidden">
+                        <img class="w-full h-20 object-cover rounded" />
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Step 2: Generate images using Pollinations
+        async function generateAllImages() {
+            const btn = document.getElementById('generateImagesBtn');
+            btn.disabled = true;
+            
+            document.getElementById('imageProgress').classList.remove('hidden');
+            document.getElementById('imagesGallery').classList.remove('hidden');
+            
+            generatedImages = [];
+            const galleryGrid = document.getElementById('galleryGrid');
+            galleryGrid.innerHTML = '';
+            
+            for (let i = 0; i < scenes.length; i++) {
+                const scene = scenes[i];
+                updateProgress(i, scenes.length);
+                updateSceneStatus(scene.id, '생성중', 'warning');
+                
+                try {
+                    const imageUrl = await generateImage(scene);
+                    scene.imageUrl = imageUrl;
+                    scene.status = 'completed';
+                    generatedImages.push(imageUrl);
+                    
+                    // Show preview
+                    const previewDiv = document.getElementById(`preview-${scene.id}`);
+                    previewDiv.classList.remove('hidden');
+                    previewDiv.querySelector('img').src = imageUrl;
+                    
+                    // Add to gallery
+                    const imgCard = document.createElement('div');
+                    imgCard.className = 'image-card';
+                    imgCard.innerHTML = `
+                        <img src="${imageUrl}" class="w-full h-32 object-cover rounded-lg shadow-lg" />
+                        <p class="text-xs text-gray-400 mt-1 text-center">Scene ${scene.id}</p>
+                    `;
+                    galleryGrid.appendChild(imgCard);
+                    
+                    updateSceneStatus(scene.id, '완료', 'success');
+                } catch (error) {
+                    console.error(`Failed to generate image for scene ${scene.id}:`, error);
+                    updateSceneStatus(scene.id, '실패', 'error');
+                }
+                
+                // Small delay between requests
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
+            updateProgress(scenes.length, scenes.length);
+            btn.disabled = false;
+            
+            if (generatedImages.length > 0) {
+                document.getElementById('generateVideoBtn').disabled = false;
+                showStatus('모든 이미지가 생성되었습니다!', 'success');
+            }
+        }
+
+        async function generateImage(scene) {
+            // Enhanced prompt for better quality
+            const enhancedPrompt = `${scene.description}, ${scene.style} style, high quality, detailed, professional photography, 8k resolution`;
+            
+            // Use Pollinations API (free, no auth required)
+            const width = 1920;
+            const height = 1080;
+            const seed = Math.floor(Math.random() * 1000000);
+            
+            const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=${width}&height=${height}&seed=${seed}&nologo=true`;
+            
+            // Pre-load image to ensure it's generated
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(imageUrl);
+                img.onerror = () => reject(new Error('Image generation failed'));
+                img.src = imageUrl;
+            });
+        }
+
+        function updateProgress(current, total) {
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            
+            const percentage = (current / total) * 100;
+            progressBar.style.width = percentage + '%';
+            progressText.textContent = `${current}/${total} 이미지 생성 중`;
+        }
+
+        function updateSceneStatus(sceneId, text, type) {
+            const statusEl = document.getElementById(`status-${sceneId}`);
+            const colors = {
+                success: 'bg-green-700 text-green-300',
+                warning: 'bg-yellow-700 text-yellow-300',
+                error: 'bg-red-700 text-red-300',
+                default: 'bg-gray-700 text-gray-400'
+            };
+            
+            statusEl.className = `text-xs px-2 py-1 rounded ${colors[type] || colors.default}`;
+            statusEl.textContent = text;
+        }
+
+        // Step 3: Generate video using WAN 2.2 simulation
+        async function generateVideo() {
+            const btn = document.getElementById('generateVideoBtn');
+            btn.disabled = true;
+            
+            const videoStatus = document.getElementById('videoStatus');
+            videoStatus.classList.remove('hidden');
+            
+            const statusText = document.getElementById('statusText');
+            
+            try {
+                // Prepare video generation parameters
+                const params = {
+                    images: generatedImages,
+                    resolution: document.getElementById('resolution').value,
+                    fps: parseInt(document.getElementById('fps').value),
+                    sceneDuration: parseInt(document.getElementById('sceneDuration').value),
+                    motionIntensity: parseInt(document.getElementById('motionIntensity').value) / 100,
+                    useUpscaling: document.getElementById('useUpscaling').checked,
+                    scenes: scenes.map(s => ({
+                        description: s.description,
+                        style: s.style
+                    }))
+                };
+                
+                // Simulate video generation stages
+                const stages = [
+                    '이미지 분석 중...',
+                    'WAN 2.2 모델 로딩...',
+                    '모션 생성 중...',
+                    'Real-ESRGAN 업스케일링...',
+                    '프레임 보간 처리...',
+                    '비디오 렌더링...',
+                    '최종 인코딩...'
+                ];
+                
+                for (let i = 0; i < stages.length; i++) {
+                    statusText.textContent = stages[i];
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                }
+                
+                // 데모 모드: 실제 API 대신 모의 비디오 생성
+                statusText.textContent = '비디오 생성 완료!';
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // For demo, create a mock video directly
+                createMockVideo();
+                showStatus('비디오 생성이 완료되었습니다! (데모 모드)', 'success');
+                
+            } catch (error) {
+                console.error('Video generation error:', error);
+                showStatus('비디오 생성 중 오류가 발생했습니다', 'error');
+                
+                // 오류 발생 시에도 데모 비디오 생성
+                createMockVideo();
+            } finally {
+                btn.disabled = false;
+                videoStatus.classList.add('hidden');
+            }
+        }
+
+        function createMockVideo() {
+            // Create mock video for demonstration
+            const videoResult = document.getElementById('videoResult');
+            videoResult.classList.remove('hidden');
+            
+            const video = document.getElementById('resultVideo');
+            
+            // 첫 번째 이미지를 포스터로 설정
+            if (generatedImages.length > 0) {
+                const firstImage = generatedImages[0];
+                video.poster = firstImage.url || firstImage;
+            }
+            
+            // 실제 비디오 파일 대신 샘플 비디오 URL 또는 이미지 슬라이드쇼 표시
+            // 데모를 위해 Big Buck Bunny 샘플 비디오 사용
+            const sampleVideoUrl = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+            video.src = sampleVideoUrl;
+            videoUrl = sampleVideoUrl;
+            
+            // 스크롤해서 비디오 보여주기
+            videoResult.scrollIntoView({ behavior: 'smooth' });
+            
+            showStatus('데모 비디오가 준비되었습니다! (샘플 영상)', 'success');
+        }
+
+        function displayVideoResult(url) {
+            const videoResult = document.getElementById('videoResult');
+            videoResult.classList.remove('hidden');
+            
+            const video = document.getElementById('resultVideo');
+            video.src = url;
+            
+            // Scroll to video
+            videoResult.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function downloadVideo() {
+            if (videoUrl) {
+                const a = document.createElement('a');
+                a.href = videoUrl;
+                a.download = `ai-video-${Date.now()}.mp4`;
+                a.click();
+                showStatus('다운로드가 시작되었습니다', 'success');
+            } else {
+                showStatus('다운로드할 비디오가 없습니다', 'warning');
+            }
+        }
+
+        function shareVideo() {
+            if (navigator.share && videoUrl) {
+                navigator.share({
+                    title: 'AI 생성 비디오',
+                    text: 'Pollinations + WAN 2.2로 생성된 비디오입니다',
+                    url: videoUrl
+                }).then(() => {
+                    showStatus('공유되었습니다', 'success');
+                }).catch(err => console.error('Share failed:', err));
+            } else {
+                // Copy URL to clipboard
+                if (videoUrl) {
+                    navigator.clipboard.writeText(videoUrl);
+                    showStatus('링크가 복사되었습니다', 'success');
+                }
+            }
+        }
+
+        function editVideo() {
+            showStatus('비디오 편집기를 준비 중입니다...', 'info');
+            // Could open video editor or redirect to editing interface
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            showStatus('AI 비디오 생성기가 준비되었습니다 (데모 모드)', 'info');
+            
+            // 안내 메시지 추가
+            const statusText = document.getElementById('statusText');
+            if (statusText) {
+                statusText.textContent = 'Pollinations 이미지를 업로드하거나 직접 입력하여 시작하세요';
+            }
+        });
+
+        // Listen for messages from parent window (Pollinations images)
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'pollinations-image') {
+                const { imageUrl, prompt, index } = event.data;
+                
+                // Add the image to Step 2
+                addPollinationsImage(imageUrl, prompt, index);
+                
+                showStatus(`✅ Pollinations 이미지 추가됨: ${prompt.substring(0, 40)}...`, 'success');
+                
+                // 페이지 상단으로 스크롤하여 결과를 보기 쉽게
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+
+        // Add Pollinations image to the image generation section
+        function addPollinationsImage(imageUrl, prompt, index) {
+            // Add to generated images array
+            generatedImages.push({
+                url: imageUrl,
+                prompt: prompt,
+                source: 'pollinations'
+            });
+
+            // Show images gallery if hidden
+            const gallery = document.getElementById('imagesGallery');
+            gallery.classList.remove('hidden');
+
+            // Add image to gallery
+            const galleryGrid = document.getElementById('galleryGrid');
+            const imageCard = document.createElement('div');
+            imageCard.className = 'image-card bg-gray-800 rounded-lg overflow-hidden';
+            imageCard.innerHTML = `
+                <img src="${imageUrl}" alt="Pollinations Image" class="w-full h-32 object-cover">
+                <div class="p-2">
+                    <p class="text-xs text-gray-400 truncate">${prompt}</p>
+                    <span class="text-xs bg-purple-600 text-white px-2 py-1 rounded mt-1 inline-block">Pollinations</span>
+                </div>
+            `;
+
+            galleryGrid.appendChild(imageCard);
+
+            // Auto-fill video topic if empty
+            const videoTopic = document.getElementById('videoTopic');
+            if (!videoTopic.value.trim()) {
+                videoTopic.value = prompt;
+            }
+
+            // Enable video generation button if we have images
+            const generateBtn = document.getElementById('generateVideoBtn');
+            generateBtn.disabled = generatedImages.length === 0;
+            generateBtn.textContent = `🚀 비디오 생성 시작 (${generatedImages.length}개 이미지)`;
+        }
+    </script>
+</body>
+</html>

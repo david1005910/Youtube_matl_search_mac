@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>썸네일 Pollinations 통합 테스트</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: #0f172a; }
+        .gradient-bg {
+            background: linear-gradient(135deg, #ec4899 0%, #f43f5e 100%);
+        }
+    </style>
+</head>
+<body class="text-white min-h-screen p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-8 text-center gradient-bg bg-clip-text text-transparent">
+            🖼️ 썸네일 Pollinations AI 테스트
+        </h1>
+
+        <!-- Test Thumbnail Prompt -->
+        <div class="bg-slate-800 rounded-lg p-6 mb-6">
+            <h2 class="text-xl font-bold mb-4 text-pink-400">📝 썸네일 프롬프트</h2>
+            
+            <div class="mb-4">
+                <label class="block text-sm text-slate-400 mb-2">한국어 컨셉:</label>
+                <textarea id="koreanConcept" rows="3" class="w-full p-3 bg-slate-900 rounded-lg text-slate-100 border border-slate-700">
+트럼프 재집권이 한국 경제에 미치는 영향을 보여주는 썸네일. 트럼프의 얼굴이 중앙에, 배경에는 한국과 미국 국기, 경제 그래프
+                </textarea>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm text-slate-400 mb-2">영어 프롬프트 (자동 변환 또는 직접 입력):</label>
+                <textarea id="englishPrompt" rows="4" class="w-full p-3 bg-slate-900 rounded-lg text-slate-100 border border-slate-700">
+A photorealistic cinematic YouTube thumbnail image. Centered, a determined, slightly stern close-up portrait of Donald Trump, looking directly at the viewer. Behind him, a subtly chaotic global map, with intertwined red and blue hues symbolizing political divide. Overlaying the map are scattered, stylized currency symbols (dollar, euro, yuan) in gold and silver, suggesting economic impact.
+                </textarea>
+            </div>
+            
+            <div class="flex gap-4 mb-4">
+                <select id="modelSelect" class="px-4 py-2 bg-slate-700 rounded-lg">
+                    <option value="turbo">Turbo (빠름)</option>
+                    <option value="flux" selected>Flux (고품질)</option>
+                    <option value="flux-realism">Flux Realism</option>
+                    <option value="flux-anime">Flux Anime</option>
+                    <option value="flux-3d">Flux 3D</option>
+                </select>
+                
+                <select id="sizeSelect" class="px-4 py-2 bg-slate-700 rounded-lg">
+                    <option value="1920x1080" selected>Full HD (1920×1080)</option>
+                    <option value="1280x720">HD (1280×720)</option>
+                    <option value="2560x1440">2K (2560×1440)</option>
+                </select>
+                
+                <button onclick="convertToEnglish()" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg font-bold">
+                    🔄 한→영 변환
+                </button>
+            </div>
+            
+            <button onclick="generateThumbnail()" class="w-full py-3 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white rounded-lg font-bold text-lg">
+                🎨 썸네일 생성 (Pollinations)
+            </button>
+        </div>
+
+        <!-- Generated Thumbnail -->
+        <div id="resultSection" class="bg-slate-800 rounded-lg p-6 hidden">
+            <h2 class="text-xl font-bold mb-4 text-green-400">✅ 생성된 썸네일</h2>
+            
+            <div id="loadingSpinner" class="text-center py-8 hidden">
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500"></div>
+                <p class="mt-4 text-slate-400">썸네일 생성 중...</p>
+            </div>
+            
+            <div id="thumbnailContainer" class="hidden">
+                <img id="thumbnailImage" class="w-full rounded-lg shadow-2xl mb-4" />
+                
+                <div class="flex gap-3 flex-wrap">
+                    <a id="downloadLink" download="thumbnail.jpg" class="px-4 py-2 bg-green-600 hover:bg-green-500 rounded-lg font-bold">
+                        💾 다운로드
+                    </a>
+                    <button onclick="regenerate()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-bold">
+                        🔄 재생성
+                    </button>
+                    <button onclick="copyUrl()" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg font-bold">
+                        📋 URL 복사
+                    </button>
+                    <button onclick="openInNewTab()" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg font-bold">
+                        🔗 새 탭에서 열기
+                    </button>
+                </div>
+                
+                <div class="mt-4 p-3 bg-slate-900 rounded">
+                    <p class="text-xs text-slate-400">
+                        <span id="imageInfo"></span>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Messages -->
+        <div id="status" class="fixed bottom-4 right-4 bg-slate-900 px-6 py-3 rounded-lg shadow-lg hidden"></div>
+    </div>
+
+    <script>
+        let currentImageUrl = null;
+        
+        // Convert Korean to English (mock - in real app would use Gemini)
+        async function convertToEnglish() {
+            const korean = document.getElementById('koreanConcept').value;
+            if (!korean.trim()) {
+                showStatus('한국어 컨셉을 입력해주세요', 'error');
+                return;
+            }
+            
+            showStatus('영어로 변환 중...', 'info');
+            
+            // In real app, this would call Gemini API
+            // For demo, we'll use a pre-written prompt
+            const englishPrompt = `A cinematic YouTube thumbnail featuring ${korean}. Photorealistic style, dramatic lighting, bold composition with space for text overlay, high contrast, eye-catching colors.`;
+            
+            document.getElementById('englishPrompt').value = englishPrompt;
+            showStatus('변환 완료!', 'success');
+        }
+        
+        // Generate thumbnail using Pollinations
+        async function generateThumbnail() {
+            const prompt = document.getElementById('englishPrompt').value.trim();
+            if (!prompt) {
+                showStatus('프롬프트를 입력해주세요', 'error');
+                return;
+            }
+            
+            const model = document.getElementById('modelSelect').value;
+            const [width, height] = document.getElementById('sizeSelect').value.split('x').map(Number);
+            
+            // Show result section
+            const resultSection = document.getElementById('resultSection');
+            const spinner = document.getElementById('loadingSpinner');
+            const container = document.getElementById('thumbnailContainer');
+            
+            resultSection.classList.remove('hidden');
+            spinner.classList.remove('hidden');
+            container.classList.add('hidden');
+            
+            showStatus('썸네일 생성 중...', 'info');
+            
+            try {
+                // Generate Pollinations URL
+                const seed = Math.floor(Math.random() * 1000000);
+                const params = new URLSearchParams({
+                    width: width.toString(),
+                    height: height.toString(),
+                    seed: seed.toString(),
+                    nologo: 'true',
+                    model: model
+                });
+                
+                currentImageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?${params}`;
+                
+                // Pre-load image
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                
+                await new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = () => reject(new Error('이미지 생성 실패'));
+                    img.src = currentImageUrl;
+                });
+                
+                // Display image
+                document.getElementById('thumbnailImage').src = currentImageUrl;
+                document.getElementById('downloadLink').href = currentImageUrl;
+                document.getElementById('imageInfo').textContent = 
+                    `모델: ${model} | 해상도: ${width}×${height} | Seed: ${seed}`;
+                
+                spinner.classList.add('hidden');
+                container.classList.remove('hidden');
+                
+                showStatus('썸네일 생성 완료!', 'success');
+                
+            } catch (error) {
+                console.error('Thumbnail generation error:', error);
+                showStatus('썸네일 생성 실패: ' + error.message, 'error');
+                spinner.classList.add('hidden');
+            }
+        }
+        
+        // Regenerate with new seed
+        function regenerate() {
+            generateThumbnail();
+        }
+        
+        // Copy URL to clipboard
+        function copyUrl() {
+            if (!currentImageUrl) return;
+            
+            navigator.clipboard.writeText(currentImageUrl).then(() => {
+                showStatus('URL이 복사되었습니다', 'success');
+            }).catch(err => {
+                showStatus('복사 실패', 'error');
+            });
+        }
+        
+        // Open in new tab
+        function openInNewTab() {
+            if (currentImageUrl) {
+                window.open(currentImageUrl, '_blank');
+            }
+        }
+        
+        // Show status message
+        function showStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            const colors = {
+                info: 'text-blue-400',
+                success: 'text-green-400',
+                error: 'text-red-400'
+            };
+            
+            status.className = `fixed bottom-4 right-4 bg-slate-900 px-6 py-3 rounded-lg shadow-lg ${colors[type]}`;
+            status.textContent = message;
+            status.classList.remove('hidden');
+            
+            if (type !== 'error') {
+                setTimeout(() => {
+                    status.classList.add('hidden');
+                }, 3000);
+            }
+        }
+        
+        // Auto-generate on load for testing
+        window.addEventListener('load', () => {
+            showStatus('Pollinations AI 썸네일 생성기 준비 완료', 'info');
+        });
+    </script>
+</body>
+</html>
